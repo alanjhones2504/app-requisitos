@@ -1,16 +1,19 @@
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Users, FileText, Zap, ArrowRight } from 'lucide-react';
 import ProfileForm from '@/components/ProfileForm';
 import RequirementsForm from '@/components/RequirementsForm';
 import SummaryView from '@/components/SummaryView';
+import { db } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
 
 const Index = () => {
   const [currentStep, setCurrentStep] = useState('home');
   const [profileData, setProfileData] = useState(null);
   const [requirementsData, setRequirementsData] = useState(null);
+
+  const benefitsSectionRef = useRef(null);
 
   const benefits = [
     {
@@ -35,9 +38,27 @@ const Index = () => {
     setCurrentStep('requirements');
   };
 
-  const handleRequirementsComplete = (data) => {
+  const handleRequirementsComplete = async (data) => {
     setRequirementsData(data);
+    
+    try {
+      const docRef = await addDoc(collection(db, "project_requirements"), {
+        profileData: profileData,
+        requirementsData: data,
+        timestamp: new Date()
+      });
+      console.log("Document written with ID: ", docRef.id);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
+
     setCurrentStep('summary');
+  };
+
+  const handleViewDemo = () => {
+    if (benefitsSectionRef.current) {
+      benefitsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   if (currentStep === 'profile') {
@@ -87,6 +108,7 @@ const Index = () => {
                 variant="outline" 
                 size="lg"
                 className="px-8 py-4 text-lg border-2 hover:bg-gray-50 transition-all duration-300"
+                onClick={handleViewDemo}
               >
                 Ver Demonstração
               </Button>
@@ -96,7 +118,7 @@ const Index = () => {
       </div>
 
       {/* Benefits Section */}
-      <div className="py-24 bg-white">
+      <div ref={benefitsSectionRef} className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">

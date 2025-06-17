@@ -1,17 +1,22 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle, Download, Mail, RotateCcw, User, Building2, Globe, Smartphone, Monitor, ShoppingCart, Users, BarChart, Shield, Star } from 'lucide-react';
+import { ProfileFormData } from './ProfileForm';
+import { RequirementsFormData } from './RequirementsForm';
+import html2pdf from 'html2pdf.js';
+import React, { useRef } from 'react';
 
 interface SummaryViewProps {
-  profileData: any;
-  requirementsData: any;
+  profileData: ProfileFormData;
+  requirementsData: RequirementsFormData;
   onRestart: () => void;
 }
 
 const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewProps) => {
+  const summaryRef = useRef(null);
+
   const getProjectTypeIcon = (type: string) => {
     const icons = {
       website: Globe,
@@ -79,9 +84,15 @@ const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewPr
     return recommendations;
   };
 
+  const handleDownloadPDF = () => {
+    if (summaryRef.current) {
+      html2pdf().from(summaryRef.current).save('resumo_requisitos.pdf');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div ref={summaryRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-4">
             <CheckCircle className="w-4 h-4 mr-2" />
@@ -318,7 +329,10 @@ const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewPr
                 <CardTitle className="text-lg">Ações Rápidas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                <Button 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  onClick={handleDownloadPDF}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Baixar Resumo PDF
                 </Button>

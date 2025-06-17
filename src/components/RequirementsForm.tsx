@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,15 +9,34 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, ArrowLeft, Globe, Smartphone, Monitor, ShoppingCart, Users, BarChart, Shield } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { ProfileFormData } from './ProfileForm';
+
+export interface RequirementsFormData {
+  projectType: string;
+  platforms: string[];
+  features: string[];
+  userTypes: string[];
+  designPreferences: string;
+  technicalRequirements: string;
+  integrations: string[];
+  dataRequirements: string;
+  securityNeeds: string[];
+  performanceNeeds: string;
+  maintenancePreferences: string;
+  additionalInfo: string;
+  expectedUsers: string;
+  additionalFeatures: string;
+  brandGuidelines: string;
+}
 
 interface RequirementsFormProps {
-  profileData: any;
-  onComplete: (data: any) => void;
+  profileData: ProfileFormData;
+  onComplete: (data: RequirementsFormData) => void;
 }
 
 const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) => {
   const [currentSection, setCurrentSection] = useState(0);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RequirementsFormData>({
     projectType: '',
     platforms: [],
     features: [],
@@ -30,7 +48,10 @@ const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) =>
     securityNeeds: [],
     performanceNeeds: '',
     maintenancePreferences: '',
-    additionalInfo: ''
+    additionalInfo: '',
+    expectedUsers: '',
+    additionalFeatures: '',
+    brandGuidelines: ''
   });
   const { toast } = useToast();
 
@@ -114,7 +135,7 @@ const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) =>
                     <Checkbox 
                       id={platform}
                       checked={formData.platforms.includes(platform)}
-                      onCheckedChange={(checked) => handleArrayChange('platforms', platform, checked)}
+                      onCheckedChange={(checkedState) => handleArrayChange('platforms', platform, Boolean(checkedState))}
                     />
                     <Label htmlFor={platform} className="cursor-pointer">{platform}</Label>
                   </div>
@@ -165,7 +186,7 @@ const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) =>
                     <Checkbox 
                       id={feature}
                       checked={formData.features.includes(feature)}
-                      onCheckedChange={(checked) => handleArrayChange('features', feature, checked)}
+                      onCheckedChange={(checkedState) => handleArrayChange('features', feature, Boolean(checkedState))}
                     />
                     <Label htmlFor={feature} className="cursor-pointer">{feature}</Label>
                   </div>
@@ -204,7 +225,7 @@ const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) =>
                     <Checkbox 
                       id={userType}
                       checked={formData.userTypes.includes(userType)}
-                      onCheckedChange={(checked) => handleArrayChange('userTypes', userType, checked)}
+                      onCheckedChange={(checkedState) => handleArrayChange('userTypes', userType, Boolean(checkedState))}
                     />
                     <Label htmlFor={userType} className="cursor-pointer">{userType}</Label>
                   </div>
@@ -260,7 +281,7 @@ const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) =>
                     <Checkbox 
                       id={integration}
                       checked={formData.integrations.includes(integration)}
-                      onCheckedChange={(checked) => handleArrayChange('integrations', integration, checked)}
+                      onCheckedChange={(checkedState) => handleArrayChange('integrations', integration, Boolean(checkedState))}
                     />
                     <Label htmlFor={integration} className="cursor-pointer">{integration}</Label>
                   </div>
@@ -294,14 +315,14 @@ const RequirementsForm = ({ profileData, onComplete }: RequirementsFormProps) =>
                   'Backup automático',
                   'Conformidade LGPD',
                   'Certificado SSL'
-                ].map(security => (
-                  <div key={security} className="flex items-center space-x-2 p-3 border rounded-lg">
+                ].map(securityNeed => (
+                  <div key={securityNeed} className="flex items-center space-x-2 p-3 border rounded-lg">
                     <Checkbox 
-                      id={security}
-                      checked={formData.securityNeeds.includes(security)}
-                      onCheckedChange={(checked) => handleArrayChange('securityNeeds', security, checked)}
+                      id={securityNeed}
+                      checked={formData.securityNeeds.includes(securityNeed)}
+                      onCheckedChange={(checkedState) => handleArrayChange('securityNeeds', securityNeed, Boolean(checkedState))}
                     />
-                    <Label htmlFor={security} className="cursor-pointer">{security}</Label>
+                    <Label htmlFor={securityNeed} className="cursor-pointer">{securityNeed}</Label>
                   </div>
                 ))}
               </div>
