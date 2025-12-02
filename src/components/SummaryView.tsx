@@ -4,52 +4,63 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle, Download, Mail, RotateCcw, User, Building2, Globe, Smartphone, Monitor, ShoppingCart, Users, BarChart, Shield, Star } from 'lucide-react';
 import { ProfileFormData } from './ProfileForm';
-import { RequirementsFormData } from './RequirementsForm';
 import html2pdf from 'html2pdf.js';
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { services } from '@/types/services';
+import { serviceQuestions } from '@/data/serviceQuestions';
+import { notifyWhatsApp } from '@/services/whatsappService';
+import { useToast } from '@/hooks/use-toast';
 
 interface SummaryViewProps {
   profileData: ProfileFormData;
-  requirementsData: RequirementsFormData;
+  requirementsData: any;
   onRestart: () => void;
 }
 
 const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewProps) => {
   const summaryRef = useRef(null);
+  const { toast } = useToast();
+  const [isSending, setIsSending] = useState(false);
 
-  const getProjectTypeIcon = (type: string) => {
-    const icons = {
-      website: Globe,
-      webapp: Monitor,
-      mobileapp: Smartphone,
-      ecommerce: ShoppingCart,
-      platform: Users,
-      dashboard: BarChart
+  const service = services.find(s => s.id === requirementsData?.serviceId);
+  const questions = serviceQuestions[requirementsData?.serviceId] || [];
+
+  // Enviar notificação automática ao carregar o resumo
+  useEffect(() => {
+    const sendNotifications = async () => {
+      try {
+        // Notificar via WhatsApp
+        setTimeout(() => {
+          notifyWhatsApp(profileData, requirementsData);
+        }, 1000);
+
+        toast({
+          title: "Notificações enviadas!",
+          description: "WhatsApp aberto para envio da notificação.",
+        });
+      } catch (error) {
+        console.error('Erro ao enviar notificações:', error);
+      }
     };
-    return icons[type] || Globe;
-  };
+
+    sendNotifications();
+  }, []);
 
   const getComplexityScore = () => {
-    let score = 0;
+    let score = 3; // Base score
     
-    // Base score by project type
-    const typeScores = {
-      website: 1,
-      webapp: 2,
-      mobileapp: 3,
-      ecommerce: 3,
-      platform: 4,
-      dashboard: 2
-    };
-    score += typeScores[requirementsData.projectType] || 1;
+    // Count answers
+    const answerCount = Object.keys(requirementsData?.answers || {}).length;
+    score += Math.floor(answerCount / 3);
     
-    // Add complexity based on features
-    score += requirementsData.features?.length || 0;
-    score += requirementsData.platforms?.length || 0;
-    score += requirementsData.integrations?.length || 0;
-    score += requirementsData.securityNeeds?.length || 0;
+    // Check for array answers (multiselect)
+    Object.values(requirementsData?.answers || {}).forEach((answer: any) => {
+      if (Array.isArray(answer)) {
+        score += answer.length * 0.5;
+      }
+    });
     
-    return Math.min(score, 10);
+    return Math.min(Math.round(score), 10);
   };
 
   const getComplexityLabel = (score: number) => {
@@ -60,33 +71,120 @@ const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewPr
 
   const complexityScore = getComplexityScore();
   const complexity = getComplexityLabel(complexityScore);
-  const ProjectIcon = getProjectTypeIcon(requirementsData.projectType);
 
   const generateRecommendations = () => {
     const recommendations = [];
-    
-    if (requirementsData.features?.includes('Sistema de Login/Cadastro')) {
-      recommendations.push('Considere implementar autenticação social (Google, Facebook) para melhor experiência do usuário');
-    }
-    
-    if (requirementsData.platforms?.includes('iOS App') && requirementsData.platforms?.includes('Android App')) {
-      recommendations.push('Para reduzir custos, considere desenvolver um app híbrido (React Native ou Flutter)');
-    }
-    
-    if (requirementsData.features?.includes('Pagamentos Online')) {
-      recommendations.push('Integração com múltiplos gateways de pagamento pode aumentar a taxa de conversão');
-    }
     
     if (profileData.budget === 'not-defined') {
       recommendations.push('Definir um orçamento claro ajudará a priorizar funcionalidades essenciais');
     }
     
-    return recommendations;
+    if (complexityScore >= 7) {
+      recommendations.push('Projeto de alta complexidade. Considere dividir em fases para melhor gestão');
+    }
+    
+    if (profileData.timeline === 'asap') {
+      recommendations.push('Prazo apertado pode impactar qualidade. Considere priorizar funcionalidades essenciais');
+    }
+    
+    if (service?.category === 'mobile') {
+      recommendations.push('Para apps mobile, considere começar com um MVP para validar a ideia');
+    }
+    
+    if (service?.category === 'automation') {
+      recommendations.push('Automações bem implementadas podem gerar ROI significativo em poucos meses');
+    }
+    
+    return recommendations.slice(0, 3);
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (summaryRef.current) {
-      html2pdf().from(summaryRef.current).save('resumo_requisitos.pdf');
+      setIsSending(true);
+      try {
+        const opt = {
+          margin: 10,
+          filename: `requisitos_${profileData.name}_${Date.now()}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Gerar PDF
+        const pdfBlob = await html2pdf().from(summaryRef.current).set(opt).outputPdf('blob');
+        
+        // Fazer download local
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = opt.filename;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "PDF gerado com sucesso!",
+          description: "O arquivo foi baixado e as notificações foram enviadas.",
+        });
+
+        // Enviar notificação via WhatsApp
+        setTimeout(() => {
+          notifyWhatsApp(profileData, requirementsData);
+        }, 500);
+
+      } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        toast({
+          title: "Erro ao gerar PDF",
+          description: "Tente novamente.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsSending(false);
+      }
+    }
+  };
+
+  const handleSendEmail = async () => {
+    setIsSending(true);
+    try {
+      // Gerar PDF
+      const opt = {
+        margin: 10,
+        filename: `requisitos_${profileData.name}_${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      const pdfBlob = await html2pdf().from(summaryRef.current).set(opt).outputPdf('blob');
+
+      // Criar link mailto com informações
+      const subject = encodeURIComponent(`Requisitos - ${requirementsData.serviceName} - ${profileData.name}`);
+      const body = encodeURIComponent(
+        `Olá,\n\nSegue o levantamento de requisitos:\n\n` +
+        `Cliente: ${profileData.name}\n` +
+        `Email: ${profileData.email}\n` +
+        `Serviço: ${requirementsData.serviceName}\n\n` +
+        `O PDF foi gerado e está anexado.\n\n` +
+        `Atenciosamente,\n${profileData.name}`
+      );
+
+      window.location.href = `mailto:webjhonesapp@gmail.com?subject=${subject}&body=${body}`;
+
+      toast({
+        title: "Email preparado!",
+        description: "Seu cliente de email foi aberto. Anexe o PDF baixado.",
+      });
+
+    } catch (error) {
+      console.error('Erro:', error);
+      toast({
+        title: "Erro",
+        description: "Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -113,20 +211,25 @@ const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewPr
             <Card className="shadow-lg border-0">
               <CardHeader>
                 <CardTitle className="flex items-center text-2xl">
-                  <ProjectIcon className="w-6 h-6 mr-3 text-blue-600" />
+                  <span className="text-4xl mr-3">{service?.icon}</span>
                   Visão Geral do Projeto
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Tipo de Projeto:</span>
+                  <span className="font-medium">Tipo de Serviço:</span>
                   <Badge variant="outline" className="text-sm">
-                    {requirementsData.projectType === 'website' && 'Website Institucional'}
-                    {requirementsData.projectType === 'webapp' && 'Aplicação Web'}
-                    {requirementsData.projectType === 'mobileapp' && 'Aplicativo Mobile'}
-                    {requirementsData.projectType === 'ecommerce' && 'E-commerce'}
-                    {requirementsData.projectType === 'platform' && 'Plataforma/Marketplace'}
-                    {requirementsData.projectType === 'dashboard' && 'Dashboard/BI'}
+                    {service?.name}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Categoria:</span>
+                  <Badge variant="secondary" className="text-sm">
+                    {service?.category === 'web' && 'Web & Sites'}
+                    {service?.category === 'mobile' && 'Mobile'}
+                    {service?.category === 'automation' && 'Automação'}
+                    {service?.category === 'development' && 'Desenvolvimento'}
                   </Badge>
                 </div>
                 
@@ -219,106 +322,34 @@ const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewPr
               </CardContent>
             </Card>
 
-            {/* Technical Requirements */}
+            {/* Requirements Answers */}
             <Card className="shadow-lg border-0">
               <CardHeader>
-                <CardTitle className="text-xl">Requisitos Técnicos</CardTitle>
+                <CardTitle className="text-xl">Respostas do Questionário</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {requirementsData.platforms?.length > 0 && (
-                  <div>
-                    <span className="font-medium block mb-2">Plataformas:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {requirementsData.platforms.map((platform, index) => (
-                        <Badge key={index} variant="secondary">{platform}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {questions.map((question) => {
+                  const answer = requirementsData?.answers?.[question.id];
+                  if (!answer) return null;
 
-                {requirementsData.features?.length > 0 && (
-                  <div>
-                    <span className="font-medium block mb-2">Funcionalidades:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {requirementsData.features.map((feature, index) => (
-                        <Badge key={index} variant="outline">{feature}</Badge>
-                      ))}
+                  return (
+                    <div key={question.id}>
+                      <span className="font-medium block mb-2">{question.question}</span>
+                      {Array.isArray(answer) ? (
+                        <div className="flex flex-wrap gap-2">
+                          {answer.map((item, index) => (
+                            <Badge key={index} variant="secondary">{item}</Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{answer}</p>
+                      )}
                     </div>
-                  </div>
-                )}
-
-                {requirementsData.integrations?.length > 0 && (
-                  <div>
-                    <span className="font-medium block mb-2">Integrações:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {requirementsData.integrations.map((integration, index) => (
-                        <Badge key={index} variant="secondary">{integration}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {requirementsData.securityNeeds?.length > 0 && (
-                  <div>
-                    <span className="font-medium block mb-2">Requisitos de Segurança:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {requirementsData.securityNeeds.map((need, index) => (
-                        <Badge key={index} className="bg-red-100 text-red-800">{need}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {requirementsData.userTypes?.length > 0 && (
-                  <div>
-                    <span className="font-medium block mb-2">Tipos de Usuário:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {requirementsData.userTypes.map((type, index) => (
-                        <Badge key={index} variant="outline">{type}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </CardContent>
             </Card>
 
-            {/* Additional Information */}
-            {(requirementsData.designPreferences || requirementsData.dataRequirements || requirementsData.performanceNeeds || requirementsData.additionalInfo) && (
-              <Card className="shadow-lg border-0">
-                <CardHeader>
-                  <CardTitle className="text-xl">Informações Adicionais</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {requirementsData.designPreferences && (
-                    <div>
-                      <span className="font-medium block mb-2">Preferências de Design:</span>
-                      <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{requirementsData.designPreferences}</p>
-                    </div>
-                  )}
-                  
-                  {requirementsData.dataRequirements && (
-                    <div>
-                      <span className="font-medium block mb-2">Requisitos de Dados:</span>
-                      <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{requirementsData.dataRequirements}</p>
-                    </div>
-                  )}
-                  
-                  {requirementsData.performanceNeeds && (
-                    <div>
-                      <span className="font-medium block mb-2">Requisitos de Performance:</span>
-                      <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{requirementsData.performanceNeeds}</p>
-                    </div>
-                  )}
-                  
-                  {requirementsData.additionalInfo && (
-                    <div>
-                      <span className="font-medium block mb-2">Informações Adicionais:</span>
-                      <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{requirementsData.additionalInfo}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Sidebar */}
@@ -332,13 +363,29 @@ const SummaryView = ({ profileData, requirementsData, onRestart }: SummaryViewPr
                 <Button 
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                   onClick={handleDownloadPDF}
+                  disabled={isSending}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Baixar Resumo PDF
+                  {isSending ? 'Gerando...' : 'Baixar PDF'}
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleSendEmail}
+                  disabled={isSending}
+                >
                   <Mail className="w-4 h-4 mr-2" />
                   Enviar por Email
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => notifyWhatsApp(profileData, requirementsData)}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                  </svg>
+                  Notificar WhatsApp
                 </Button>
                 <Button variant="outline" className="w-full" onClick={onRestart}>
                   <RotateCcw className="w-4 h-4 mr-2" />

@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Users, FileText, Zap, ArrowRight } from 'lucide-react';
 import ProfileForm from '@/components/ProfileForm';
-import RequirementsForm from '@/components/RequirementsForm';
+import ServiceSelector from '@/components/ServiceSelector';
+import ServiceQuestionnaire from '@/components/ServiceQuestionnaire';
 import SummaryView from '@/components/SummaryView';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -11,6 +12,7 @@ import { collection, addDoc } from 'firebase/firestore';
 const Index = () => {
   const [currentStep, setCurrentStep] = useState('home');
   const [profileData, setProfileData] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
   const [requirementsData, setRequirementsData] = useState(null);
 
   const benefitsSectionRef = useRef(null);
@@ -33,18 +35,23 @@ const Index = () => {
     }
   ];
 
-  const handleProfileComplete = (data) => {
-    setProfileData(data);
-    setCurrentStep('requirements');
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedService(serviceId);
+    setCurrentStep('profile');
   };
 
-  const handleRequirementsComplete = async (data) => {
+  const handleProfileComplete = (data) => {
+    setProfileData(data);
+    setCurrentStep('questionnaire');
+  };
+
+  const handleQuestionnaireComplete = async (data) => {
     setRequirementsData(data);
     
     try {
       const docRef = await addDoc(collection(db, "project_requirements"), {
         profileData: profileData,
-        requirementsData: data,
+        serviceData: data,
         timestamp: new Date()
       });
       console.log("Document written with ID: ", docRef.id);
@@ -61,12 +68,28 @@ const Index = () => {
     }
   };
 
-  if (currentStep === 'profile') {
+  if (currentStep === 'service-selection') {
+    return (
+      <ServiceSelector 
+        onSelectService={handleServiceSelect}
+        onBack={() => setCurrentStep('home')}
+      />
+    );
+  }
+
+  if (currentStep === 'profile' && selectedService) {
     return <ProfileForm onComplete={handleProfileComplete} />;
   }
 
-  if (currentStep === 'requirements') {
-    return <RequirementsForm profileData={profileData} onComplete={handleRequirementsComplete} />;
+  if (currentStep === 'questionnaire' && selectedService) {
+    return (
+      <ServiceQuestionnaire
+        serviceId={selectedService}
+        profileData={profileData}
+        onComplete={handleQuestionnaireComplete}
+        onBack={() => setCurrentStep('profile')}
+      />
+    );
   }
 
   if (currentStep === 'summary') {
@@ -98,7 +121,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                onClick={() => setCurrentStep('profile')}
+                onClick={() => setCurrentStep('service-selection')}
               >
                 Iniciar Levantamento
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -165,18 +188,18 @@ const Index = () => {
             {[
               {
                 step: "01",
-                title: "Perfil & Contexto",
-                description: "Colete informações básicas sobre o cliente e sua empresa para personalizar a experiência"
+                title: "Escolha o Serviço",
+                description: "Selecione o tipo de projeto que você precisa entre 13 opções disponíveis"
               },
               {
                 step: "02", 
-                title: "Requisitos Guiados",
-                description: "Formulário inteligente com perguntas condicionais que se adaptam às respostas anteriores"
+                title: "Responda o Questionário",
+                description: "Perguntas personalizadas e específicas para o serviço escolhido"
               },
               {
                 step: "03",
-                title: "Análise & Resumo",
-                description: "Gere automaticamente um documento estruturado com análise preliminar de viabilidade"
+                title: "Receba o Resumo",
+                description: "Documento estruturado com todos os requisitos e análise de viabilidade"
               }
             ].map((process, index) => (
               <div key={index} className="relative text-center">
@@ -208,7 +231,7 @@ const Index = () => {
           <Button 
             size="lg"
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-4 text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={() => setCurrentStep('profile')}
+            onClick={() => setCurrentStep('service-selection')}
           >
             Iniciar Agora
             <CheckCircle className="ml-2 w-5 h-5" />
