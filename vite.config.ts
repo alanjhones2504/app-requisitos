@@ -16,26 +16,40 @@ export default defineConfig(({ mode }) => ({
     componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt', 'placeholder.svg'],
+      includeAssets: ['favicon.ico', 'robots.txt', 'logo.svg', 'logo.png'],
       manifest: {
-        name: 'App Requisitos',
+        name: 'WebJhones Requirements',
         short_name: 'Requisitos',
-        description: 'Aplicação para gerenciamento de requisitos',
-        theme_color: '#ffffff',
+        description: 'Aplicação para gerenciamento de requisitos - WebJhones',
+        theme_color: '#0ea5e9',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
-            src: '/placeholder.svg',
+            src: '/logo.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/placeholder.svg',
+            src: '/logo.png',
             sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/logo.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/logo.svg',
+            sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
           }
         ]
       },

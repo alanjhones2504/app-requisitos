@@ -103,15 +103,36 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
+            {/* Logo */}
+            <div className="mb-8 flex justify-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full blur-xl opacity-30"></div>
+                <picture>
+                  <source srcSet="/logo.png" type="image/png" />
+                  <img 
+                    src="/logo.svg" 
+                    alt="WebJhones Requirements" 
+                    className="relative h-32 w-32 object-cover rounded-full border-4 border-white shadow-2xl bg-white"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder.svg';
+                    }}
+                  />
+                </picture>
+              </div>
+            </div>
+
             <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-8">
               <Zap className="w-4 h-4 mr-2" />
               Simplifique seu processo de discovery
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Levantamento de
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Requisitos</span>
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-2 leading-tight">
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">Web</span>
+              <span className="bg-gradient-to-r from-cyan-500 to-green-500 bg-clip-text text-transparent">Jhones</span>
             </h1>
+            <p className="text-xl md:text-2xl text-gray-600 mb-6">
+              Levantamento de <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-semibold">Requisitos</span>
+            </p>
             
             <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
               Transforme conversas iniciais em projetos bem estruturados. Nossa plataforma guia clientes através de um processo inteligente de coleta de requisitos, gerando documentação clara e análise preliminar de viabilidade.
